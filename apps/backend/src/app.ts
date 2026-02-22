@@ -8,16 +8,20 @@ import { rollRouter } from './routes/roll.routes.js'
 
 const app = new Hono()
 
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173'
+const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean)
 
 app.use('*', logger())
 app.use('*', prettyJSON())
 app.use(
   '*',
   cors({
-    origin: FRONTEND_ORIGIN,
+    origin: (origin) => (FRONTEND_ORIGINS.includes(origin) ? origin : FRONTEND_ORIGINS[0]),
     allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type'],
+    credentials: true,
   })
 )
 
