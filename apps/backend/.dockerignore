@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+*.db
+.env*
+.git
+.github
+tests
+*.test.ts
+README.md

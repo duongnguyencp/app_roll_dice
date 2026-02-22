@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  storybook-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/frontend/package-lock.json
+      - run: npm ci
+      - run: npm run check:changed-screens-stories
+        env:
+          DIFF_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          DIFF_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      - run: npm run test-storybook:ci
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            apps/backend/package-lock.json
+            apps/frontend/package-lock.json
+      
+      # Setup backend
+      - name: Install backend dependencies
+        working-directory: apps/backend
+        run: npm ci
+      
+      - name: Run database migrations
+        working-directory: apps/backend
+        run: npm run migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+          NODE_ENV: test
+      
+      - name: Start backend server
+        working-directory: apps/backend
+        run: |
+          npm run dev > backend.log 2>&1 &
+          echo $! > backend.pid
+          echo "Backend PID: $(cat backend.pid)"
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+          PORT: 3000
+          JWT_SECRET: test-secret-key-for-ci
+          NODE_ENV: test
+      
+      - name: Wait for backend to be ready
+        run: |
+          echo "Waiting for backend health check..."
+          for i in {1..30}; do
+            if curl -f http://localhost:3000/api/health 2>/dev/null; then
+              echo "✓ Backend is ready!"
+              exit 0
+            fi
+            echo "  Attempt $i/30: Backend not ready yet..."
+            sleep 2
+          done
+          echo "✗ Backend failed to start within 60 seconds"
+          cat apps/backend/backend.log
+          exit 1
+      
+      # Setup frontend
+      - name: Install frontend dependencies
+        working-directory: apps/frontend
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        working-directory: apps/frontend
+        run: npx playwright install --with-deps chromium
+      
+      # Run E2E tests
+      - name: Run Playwright E2E tests
+        working-directory: apps/frontend
+        run: npm run test:e2e
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:5173
+          PLAYWRIGHT_USE_WEBSERVER: 'true'
+          CI: true
+      
+      # Upload artifacts on failure
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/frontend/playwright-report/
+          retention-days: 7
+      
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results
+          path: apps/frontend/test-results/
+          retention-days: 7
+      
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: backend-logs
+          path: apps/backend/backend.log
+          retention-days: 7

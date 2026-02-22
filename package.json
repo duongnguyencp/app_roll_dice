@@ -1,0 +1,12 @@
+{
+  "name": "app_roll_dice",
+  "private": true,
+  "workspaces": ["apps/backend", "apps/frontend"],
+  "scripts": {
+    "dev:backend": "cd apps/backend && npm run dev",
+    "dev:frontend": "cd apps/frontend && npm run dev",
+    "test:backend": "cd apps/backend && npm test",
+    "test:backend:coverage": "cd apps/backend && npm run test:coverage",
+    "install:all": "npm install && cd apps/backend && npm install && cd ../frontend && npm install"
+  }
+}
