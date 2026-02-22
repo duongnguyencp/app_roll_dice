@@ -34,11 +34,27 @@ export async function runMigrations(): Promise<void> {
       reward_title  TEXT NOT NULL,
       reward_description TEXT DEFAULT NULL,
       rolled_at     TEXT NOT NULL,
+      used          INTEGER NOT NULL DEFAULT 0,
+      used_at       TEXT DEFAULT NULL,
       FOREIGN KEY (dice_id) REFERENCES dice(dice_id)
     );
 
     CREATE INDEX IF NOT EXISTS idx_dice_deleted ON dice(deleted_at);
     CREATE INDEX IF NOT EXISTS idx_rewards_dice ON rewards(dice_id, deleted_at);
     CREATE INDEX IF NOT EXISTS idx_history_dice ON roll_history(dice_id, rolled_at);
+    CREATE INDEX IF NOT EXISTS idx_history_used  ON roll_history(used, rolled_at);
   `)
+
+  // Incremental migrations — safe to run on existing DB
+  const alterStatements = [
+    `ALTER TABLE roll_history ADD COLUMN used    INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE roll_history ADD COLUMN used_at TEXT DEFAULT NULL`,
+  ]
+  for (const sql of alterStatements) {
+    try {
+      await db.execute(sql)
+    } catch {
+      // Column already exists — ignore
+    }
+  }
 }

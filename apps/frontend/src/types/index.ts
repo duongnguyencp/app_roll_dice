@@ -41,3 +41,22 @@ export interface UpsertRewardInput {
   reward_description?: string | null
   weight?: number
 }
+
+export interface RollHistory {
+  history_id: string
+  dice_id: string
+  dice_name: string
+  rolled_value: number
+  reward_title: string
+  reward_description: string | null
+  rolled_at: string
+  used: boolean
+  used_at: string | null
+}
+
+export interface RollHistoryListResponse {
+  data: RollHistory[]
+  total: number
+  page: number
+  page_size: number
+}

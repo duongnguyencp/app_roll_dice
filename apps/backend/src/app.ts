@@ -5,6 +5,7 @@ import { prettyJSON } from 'hono/pretty-json'
 import { diceRouter } from './routes/dice.routes.js'
 import { rewardsRouter } from './routes/rewards.routes.js'
 import { rollRouter } from './routes/roll.routes.js'
+import { historyRouter } from './routes/history.routes.js'
 
 const app = new Hono()
 
@@ -30,6 +31,7 @@ app.get('/api/health', (c) => c.json({ ok: true, ts: new Date().toISOString() })
 app.route('/api/dice', diceRouter)
 app.route('/api/dice', rewardsRouter)
 app.route('/api/dice', rollRouter)
+app.route('/api/history', historyRouter)
 
 app.onError((err, c) => {
   console.error('[Error]', err)

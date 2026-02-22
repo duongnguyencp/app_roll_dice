@@ -1,4 +1,4 @@
-import type { DiceWithRewardCount, Dice, Reward, RollResult, UpsertRewardInput } from '@/types'
+import type { DiceWithRewardCount, Dice, Reward, RollResult, UpsertRewardInput, RollHistory, RollHistoryListResponse } from '@/types'
 
 const BASE = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/api` : '/api'
 
@@ -70,4 +70,24 @@ export const rewardsApi = {
 export const rollApi = {
   roll: (dice_id: string) =>
     request<RollResult>(`/dice/${dice_id}/roll`, { method: 'POST' }),
+}
+
+// ---- History ----
+
+export const historyApi = {
+  list: (params?: { dice_id?: string; used?: boolean; page?: number; page_size?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.dice_id) q.set('dice_id', params.dice_id)
+    if (params?.used !== undefined) q.set('used', String(params.used))
+    if (params?.page) q.set('page', String(params.page))
+    if (params?.page_size) q.set('page_size', String(params.page_size))
+    const qs = q.toString()
+    return request<RollHistoryListResponse>(`/history${qs ? `?${qs}` : ''}`)
+  },
+
+  markUsed: (history_id: string, used: boolean) =>
+    request<RollHistory>(`/history/${history_id}/use`, {
+      method: 'PATCH',
+      body: JSON.stringify({ used }),
+    }),
 }

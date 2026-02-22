@@ -26,11 +26,26 @@ export interface Reward {
 export interface RollHistory {
   history_id: string
   dice_id: string
-  dice_name: string       // snapshot
+  dice_name: string             // snapshot
   rolled_value: number
-  reward_title: string    // snapshot
+  reward_title: string          // snapshot
   reward_description: string | null // snapshot
   rolled_at: string
+  used: boolean
+  used_at: string | null
+}
+
+// ---- History list / pagination ----
+export interface RollHistoryListResponse {
+  data: RollHistory[]
+  total: number
+  page: number
+  page_size: number
+}
+
+// ---- Mark used input ----
+export interface MarkRewardUsedInput {
+  used: boolean // true = đã dùng, false = hoàn tác
 }
 
 // ---- Request shapes ----
