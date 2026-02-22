@@ -13,8 +13,11 @@ RUN npm run build
 FROM nginx:alpine AS runner
 
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Dùng template để inject env var lúc runtime
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 EXPOSE 80
 
+# nginx:alpine official image tự chạy envsubst cho files trong /etc/nginx/templates/
+ENV NGINX_BACKEND_URL=http://backend:3000
 CMD ["nginx", "-g", "daemon off;"]
