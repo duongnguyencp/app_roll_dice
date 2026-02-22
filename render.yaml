@@ -1,17 +1,13 @@
-## Render Blueprint — Dice Reward
+## Render Blueprint — Dice Reward (Turso edition)
 ##
-## Deploy:  https://dashboard.render.com/select-repo  → "Existing Blueprint"
-##
-## Two options to store data (pick ONE):
-##
-##  A) Persistent Disk  — auto-configured below (Render Starter plan, $7/mo for backend)
-##     DB_PATH=/data/data.db  ← set automatically
-##
-##  B) Turso cloud DB   — free tier, survives redeploys on any plan
-##     1. Sign up at https://turso.tech/, create a DB
-##     2. Copy Database URL + Auth Token
-##     3. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in the backend service's env vars
-##        (override / remove DB_PATH)
+## Deploy:
+##   1. Tạo DB trên Turso: https://turso.tech  (free tier)
+##        turso db create dice-reward
+##        turso db show dice-reward  → copy URL
+##        turso db tokens create dice-reward  → copy token
+##   2. https://dashboard.render.com/select-repo → chọn repo → "Use Blueprint"
+##   3. Điền TURSO_DATABASE_URL và TURSO_AUTH_TOKEN khi Render hỏi (sync: false)
+##   4. Sau khi backend deploy xong → copy URL → điền vào VITE_API_BASE_URL + FRONTEND_ORIGIN
 ##
 
 services:
@@ -21,22 +17,19 @@ services:
     runtime: node
     rootDir: apps/backend
     region: singapore
-    plan: starter             # Starter plan required for Persistent Disk
+    plan: free                # Turso free tier → không cần Persistent Disk
     buildCommand: npm install && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DB_PATH
-        value: /data/data.db   # Persistent Disk mount path
+      - key: TURSO_DATABASE_URL
+        sync: false           # libsql://your-db-name.turso.io
+      - key: TURSO_AUTH_TOKEN
+        sync: false           # token từ: turso db tokens create <db-name>
       - key: FRONTEND_ORIGIN
-        sync: false            # Set this to your frontend URL after first deploy
-                               # e.g. https://dice-frontend.onrender.com
-    disk:
-      name: dice-data
-      mountPath: /data
-      sizeGB: 1
+        sync: false           # https://dice-frontend.onrender.com (sau khi frontend deploy)
 
   # ─── Frontend (Static Site) ───────────────────────────────────────────────
   - type: static
